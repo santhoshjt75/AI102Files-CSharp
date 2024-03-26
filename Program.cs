@@ -8,21 +8,29 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Threading;
 using System.Linq;
+using System.Collections;
 
 namespace ComputerVisionDemo
 {
     class Program
     {
-        static string subscriptionKey = "c554d31d9d7046af89186a7a72722f75";
-        static string endpoint = "https://ai102demosjd.cognitiveservices.azure.com/";
-        private const string ANALYZE_URL_IMAGE = "https://az900course.blob.core.windows.net/coursefiles/29755283098_9dd92acb6e_k.jpg";
+        static string subscriptionKey = "50b57b45b29942c4b5fe77e7d2c85e0f";
+        static string endpoint = "https://sjt75compvision.cognitiveservices.azure.com/";
+        private const string ANALYZE_URL_IMAGE = "https://sjt75artefactstore.blob.core.windows.net/img/SampleImage1.jpg";
+        //private const string ANALYZE_URL_IMAGE = "https://sjt75artefactstore.blob.core.windows.net/img/Landmark.jpg";
         private const string READ_TEXT_URL_IMAGE = "https://az900course.blob.core.windows.net/coursefiles/13238807_228d3a094b_o.jpg";
+        private const string DOMAIN_URL_IMAGE = "https://sjt75artefactstore.blob.core.windows.net/img/Taj.jpg";
+        private const string DOMAIN_URL_CELEB_IMAGE = "https://sjt75artefactstore.blob.core.windows.net/img/Celebrity.jpg";
+        private const string DOMAIN_URL_BRAND_IMAGE = "https://sjt75artefactstore.blob.core.windows.net/img/gray-shirt-logo.jpg";
+        private const string DOMAIN_URL_ADULT_IMAGE = "https://sjt75artefactstore.blob.core.windows.net/img/CheckModeration.jpg";
 
         static void Main(string[] args)
         {
             ComputerVisionClient client = Authenticate(endpoint, subscriptionKey);
-            //AnalyzeImageUrl(client, ANALYZE_URL_IMAGE).Wait();
-            ReadFileUrl(client, READ_TEXT_URL_IMAGE).Wait();
+
+            //Tag and image
+           AnalyzeImageUrl(client, ANALYZE_URL_IMAGE).Wait();
+            //ReadFileUrl(client, READ_TEXT_URL_IMAGE).Wait();
         }
 
         public static ComputerVisionClient Authenticate(string endpoint, string key)
@@ -44,102 +52,69 @@ namespace ComputerVisionDemo
                 VisualFeatureTypes.Objects
             };
 
+            List<VisualFeatureTypes?> brandfeatures = new List<VisualFeatureTypes?>()
+            {
+                VisualFeatureTypes.Brands
+            };
             Console.WriteLine($"Analyzing the image {Path.GetFileName(imageUrl)}...");
             Console.WriteLine();
             // Analyze the URL image 
             ImageAnalysis results = await client.AnalyzeImageAsync(imageUrl, visualFeatures: features);
-
-            Console.WriteLine("Summary:");
-            foreach (var caption in results.Description.Captions)
-            {
-                Console.WriteLine($"{caption.Text} with confidence {caption.Confidence}");
-            }
-            Console.WriteLine();
-
-            Console.WriteLine("Categories:");
-            foreach (var category in results.Categories)
-            {
-                Console.WriteLine($"{category.Name} with confidence {category.Score}");
-            }
-            Console.WriteLine();
 
             Console.WriteLine("Tags:");
             foreach (var tag in results.Tags)
             {
                 Console.WriteLine($"{tag.Name} {tag.Confidence}");
             }
-            Console.WriteLine();
 
-            Console.WriteLine("Objects:");
-            foreach (var obj in results.Objects)
+            //Describe the image
+            foreach (var desc in results.Description.Captions)
             {
-                Console.WriteLine($"{obj.ObjectProperty} with confidence {obj.Confidence} at location {obj.Rectangle.X}, " +
-                  $"{obj.Rectangle.X + obj.Rectangle.W}, {obj.Rectangle.Y}, {obj.Rectangle.Y + obj.Rectangle.H}");
+                Console.WriteLine($"{desc.Text} {desc.Confidence}");
             }
-            Console.WriteLine();
 
-            Console.WriteLine("Faces:");
-            foreach (var face in results.Faces)
+            //Domain based analysis
+            DomainModelResults domainresults = await client.AnalyzeImageByDomainAsync("landmarks", DOMAIN_URL_IMAGE);
+            if (domainresults.Result != null)
             {
-                Console.WriteLine($"A {face.Gender} of age {face.Age} at location {face.FaceRectangle.Left}, " +
-                  $"{face.FaceRectangle.Left}, {face.FaceRectangle.Top + face.FaceRectangle.Width}, " +
-                  $"{face.FaceRectangle.Top + face.FaceRectangle.Height}");
-            }
-            Console.WriteLine();
-
-            Console.WriteLine("Adult:");
-            Console.WriteLine($"Has adult content: {results.Adult.IsAdultContent} with confidence {results.Adult.AdultScore}");
-            Console.WriteLine($"Has racy content: {results.Adult.IsRacyContent} with confidence {results.Adult.RacyScore}");
-            Console.WriteLine($"Has gory content: {results.Adult.IsGoryContent} with confidence {results.Adult.GoreScore}");
-            Console.WriteLine();
-
-            Console.WriteLine("Brands:");
-            foreach (var brand in results.Brands)
-            {
-                Console.WriteLine($"Logo of {brand.Name} with confidence {brand.Confidence} at location {brand.Rectangle.X}, " +
-                  $"{brand.Rectangle.X + brand.Rectangle.W}, {brand.Rectangle.Y}, {brand.Rectangle.Y + brand.Rectangle.H}");
-            }
-            Console.WriteLine();
-
-            Console.WriteLine("Celebrities:");
-            foreach (var category in results.Categories)
-            {
-                if (category.Detail?.Celebrities != null)
+                foreach (var item in (IEnumerable)domainresults.Result)
                 {
-                    foreach (var celeb in category.Detail.Celebrities)
-                    {
-                        Console.WriteLine($"{celeb.Name} with confidence {celeb.Confidence} at location {celeb.FaceRectangle.Left}, " +
-                          $"{celeb.FaceRectangle.Top}, {celeb.FaceRectangle.Height}, {celeb.FaceRectangle.Width}");
-                    }
+                    Console.WriteLine(item);
                 }
-            }
-            Console.WriteLine();
 
-            Console.WriteLine("Landmarks:");
-            foreach (var category in results.Categories)
+            }
+
+                        
+            Console.WriteLine("Domain Landmark result");
+
+            List<VisualFeatureTypes?> moderationfeatures = new List<VisualFeatureTypes?>()
             {
-                if (category.Detail?.Landmarks != null)
-                {
-                    foreach (var landmark in category.Detail.Landmarks)
-                    {
-                        Console.WriteLine($"{landmark.Name} with confidence {landmark.Confidence}");
-                    }
-                }
-            }
+                VisualFeatureTypes.Adult
+            };
+
+            //Content Moderation
+
+            Console.WriteLine("Moderate Content");
+            ImageAnalysis moderationResults = await client.AnalyzeImageAsync(DOMAIN_URL_ADULT_IMAGE, moderationfeatures);
+
+            Console.WriteLine($"{moderationResults.Adult.IsAdultContent} {moderationResults.Adult.AdultScore}");
+            Console.WriteLine($"{moderationResults.Adult.IsGoryContent} {moderationResults.Adult.GoreScore}");
+            Console.WriteLine($"{moderationResults.Adult.IsRacyContent} {moderationResults.Adult.RacyScore}");
+            //nsole.WriteLine(domainresults.Result()landmark']);
+
             Console.WriteLine();
 
-            Console.WriteLine("Color Scheme:");
-            Console.WriteLine("Is black and white?: " + results.Color.IsBWImg);
-            Console.WriteLine("Accent color: " + results.Color.AccentColor);
-            Console.WriteLine("Dominant background color: " + results.Color.DominantColorBackground);
-            Console.WriteLine("Dominant foreground color: " + results.Color.DominantColorForeground);
-            Console.WriteLine("Dominant colors: " + string.Join(",", results.Color.DominantColors));
-            Console.WriteLine();
 
-            Console.WriteLine("Image Type:");
-            Console.WriteLine("Clip Art Type: " + results.ImageType.ClipArtType);
-            Console.WriteLine("Line Drawing Type: " + results.ImageType.LineDrawingType);
-            Console.WriteLine();
+            ///Generate Thubmail
+            ///
+            /// 
+            ///
+
+            Stream thumbnail_file = await client.GenerateThumbnailAsync(100, 100, DOMAIN_URL_ADULT_IMAGE,true);
+            //Save stream to a file on local drive
+
+            Stream output_file = File.Create ("D:\\temp\\thumbnail.jpg");
+            thumbnail_file.CopyTo(output_file);
 
         }
 
