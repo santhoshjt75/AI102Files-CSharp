@@ -23,6 +23,7 @@ namespace ComputerVisionDemo
         private const string DOMAIN_URL_CELEB_IMAGE = "https://sjt75artefactstore.blob.core.windows.net/img/Celebrity.jpg";
         private const string DOMAIN_URL_BRAND_IMAGE = "https://sjt75artefactstore.blob.core.windows.net/img/gray-shirt-logo.jpg";
         private const string DOMAIN_URL_ADULT_IMAGE = "https://sjt75artefactstore.blob.core.windows.net/img/CheckModeration.jpg";
+         private const string READ_TEXT_PRNT_IMAGE = "https://sjt75artefactstore.blob.core.windows.net/img/IMG_20240328_103427.jpg";
 
         static void Main(string[] args)
         {
@@ -116,7 +117,10 @@ namespace ComputerVisionDemo
             Stream output_file = File.Create ("D:\\temp\\thumbnail.jpg");
             thumbnail_file.CopyTo(output_file);
 
-        }
+
+            //Read printed text
+            ReadFileUrl(client, READ_TEXT_PRNT_IMAGE).Wait();
+       }
 
         public static async Task ReadFileUrl(ComputerVisionClient client, string urlFile)
         {
@@ -149,6 +153,9 @@ namespace ComputerVisionDemo
             }
             Console.WriteLine();
 
+
+
+           
         }
     }
 }
